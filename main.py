@@ -2,6 +2,8 @@ import cv2 as cv
 import numpy as np
 import os
 import keyboard
+import pyautogui
+from PIL import Image
 from time import time
 from windowcapture import WindowCapture
 from vision import Vision
@@ -24,7 +26,7 @@ vision_map.init_control_gui()
 hsv_map_filter = HsvFilter(96, 66, 66, 179, 255, 255, 95, 30, 25, 107)
 
 loop_time = time()
-while(keyboard.is_pressed('q') == False):
+while True:
 
     # get an updated image of the game
     screenshot = wincap.get_screenshot()
@@ -67,25 +69,24 @@ while(keyboard.is_pressed('q') == False):
     # display the processed image
     # cv.imshow('Keypoint Search', match_image)
     
-    # fog_range = range(10, 30)
-    # map_range = range(40, 60)
+    fog_range = range(10, 30)
+    map_range = range(40, 60)
     
-    # for x in processed_image:
-    #     for y in x:
-    #         if y[0] in fog_range:
-    #             y[0] = 0
-    #             y[1] = 255
-    #             y[2] = 0
-    #         elif y[0] in map_range:
-    #             y[0] = 255
-    #             y[1] = 0
-    #             y[2] = 0
-    #         else:
-    #             y[0] = 0
-    #             y[1] = 0
-    #             y[2] = 0
+    image_object = Image.fromarray(processed_image)
+    loaded_object = image_object.load()
 
-    cv.imshow('Processed', processed_image)
+    for x in range(0, 484, 4):
+        for y in range(0, 462, 4):
+            r, g, b = loaded_object[x, y]
+            if r in fog_range:
+                image_object.putpixel((x, y), (0, 255, 0))
+            if r in map_range:
+                image_object.putpixel((x, y), (255, 0, 0))
+    
+    image_object = np.array(image_object)
+    image_object = image_object[:, :, ::-1].copy()
+
+    cv.imshow('Processed', image_object)
     # cv.imshow('Edges', edges_image)
     #cv.imshow('Matches', output_image)
 
@@ -100,77 +101,3 @@ while(keyboard.is_pressed('q') == False):
         break
 
 print('Done.')
-
-
-
-
-
-
-
-
-
-# FOG OF WAR
-# X:  649 Y:  534 RGB: ( 12,  74, 106)
-# X:  661 Y:  542 RGB: ( 12,  76, 108)
-# X:  663 Y:  562 RGB: ( 12,  76, 108)
-# X:  663 Y:  588 RGB: ( 12,  71, 105)
-# X:  672 Y:  618 RGB: ( 12,  75, 107)
-# X:  684 Y:  661 RGB: ( 12,  70, 104)
-# X:  683 Y:  693 RGB: ( 12,  75, 107)
-# X:  681 Y:  721 RGB: ( 12,  76, 109)
-# X:  693 Y:  742 RGB: ( 12,  73, 108)
-# X:  705 Y:  768 RGB: ( 24,  70, 101)
-# X:  714 Y:  796 RGB: ( 12,  73, 109)
-# X:  720 Y:  827 RGB: ( 12,  73, 109)
-# X:  730 Y:  860 RGB: ( 12,  69, 108)
-# X:  737 Y:  870 RGB: ( 12,  74, 110)
-# X:  724 Y:  877 RGB: ( 31,  52,  77)
-# X:  721 Y:  878 RGB: ( 31,  52,  77)
-# X:  737 Y:  867 RGB: ( 12,  74, 110)
-# X:  748 Y:  867 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  743 Y:  864 RGB: ( 13,  79, 112)
-# X:  719 Y:  791 RGB: ( 16,  75, 109)
-# X:  689 Y:  741 RGB: ( 12,  73, 108)
-# X:  669 Y:  693 RGB: ( 12,  75, 107)
-# X:  668 Y:  613 RGB: ( 12,  76, 108)
-# X:  673 Y:  575 RGB: ( 12,  68, 100)
-# X:  663 Y:  550 RGB: ( 12,  76, 108)
-# X:  651 Y:  506 RGB: ( 12,  76, 108)
-# X:  652 Y:  475 RGB: ( 12,  76, 108)
-# X:  654 Y:  418 RGB: ( 12,  69, 103)
-# X:  654 Y:  371 RGB: ( 16,  69, 100)
-# X:  656 Y:  336 RGB: ( 11,  68, 102)
-# X:  662 Y:  305 RGB: ( 12,  67,  99)
-# X:  677 Y:  252 RGB: ( 14,  68,  99)
-# X:  682 Y:  236 RGB: ( 19,  67,  95)
-# X:  682 Y:  229 RGB: ( 19,  69,  99)
-
-# MAP LIMIT
-# X:  765 Y:  291 RGB: ( 45,  45,  92)
-# X:  769 Y:  295 RGB: ( 47,  47,  93)
-# X:  790 Y:  312 RGB: ( 52,  51, 101)
-# X:  816 Y:  329 RGB: ( 53,  52, 107)
-# X:  838 Y:  343 RGB: ( 46,  44,  93)
-# X:  856 Y:  364 RGB: ( 54,  52, 108)
-# X:  874 Y:  379 RGB: ( 53,  55, 110)
-# X:  892 Y:  393 RGB: ( 55,  55, 111)
-# X:  908 Y:  405 RGB: ( 52,  52, 109)
-# X:  929 Y:  420 RGB: ( 52,  54, 110)
-# X:  945 Y:  430 RGB: ( 47,  49,  99)
-# X:  957 Y:  436 RGB: ( 50,  52, 107)
-# X:  978 Y:  456 RGB: ( 47,  47,  97)
-# X:  990 Y:  467 RGB: ( 52,  53, 108)
-# X: 1003 Y:  476 RGB: ( 52,  56, 108)
-# X: 1017 Y:  488 RGB: ( 48,  52,  96)
-# X: 1023 Y:  495 RGB: ( 54,  59, 109)
-# X: 1023 Y:  495 RGB: ( 54,  59, 109)
