@@ -28,7 +28,10 @@ class Vision:
         # TM_CCOEFF, TM_CCOEFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_SQDIFF, TM_SQDIFF_NORMED
         self.method = method
 
-    def find(self, haystack_img, threshold=0.5, max_results=10):
+    def findPixels(self, screenshot):
+        pass
+
+    def findObjects(self, haystack_img, threshold=0.5, max_results=10):
         # run the OpenCV algorithm
         result = cv.matchTemplate(haystack_img, self.needle_img, self.method)
 

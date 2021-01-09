@@ -24,7 +24,7 @@ vision_map.init_control_gui()
 hsv_map_filter = HsvFilter(96, 66, 66, 179, 255, 255, 95, 30, 25, 107)
 
 loop_time = time()
-while keyboard.is_pressed('q') == False:
+while(keyboard.is_pressed('q') == False):
 
     # get an updated image of the game
     screenshot = wincap.get_screenshot()
@@ -33,39 +33,58 @@ while keyboard.is_pressed('q') == False:
     processed_image = vision_map.apply_hsv_filter(screenshot, hsv_map_filter)
 
     # do edge detection
-    edges_image = vision_map.apply_edge_filter(processed_image)
+    # edges_image = vision_map.apply_edge_filter(processed_image)
 
     # do object detection
-    #rectangles = vision_limestone.find(processed_image, 0.46)
+    #rectangles = vision_limestone.findObjects(processed_image, 0.46)
 
     # draw the detection results onto the original image
     #output_image = vision_limestone.draw_rectangles(screenshot, rectangles)
 
     # keypoint searching
-    keypoint_image = edges_image
+    # keypoint_image = edges_image
     # crop the image to remove the ui elements
-    x, w, y, h = [200, 1130, 70, 750]
-    keypoint_image = keypoint_image[y:y+h, x:x+w]
+    # x, w, y, h = [200, 1130, 70, 750]
+    # keypoint_image = keypoint_image[y:y+h, x:x+w]
 
-    kp1, kp2, matches, match_points = vision_map.match_keypoints(keypoint_image)
-    match_image = cv.drawMatches(
-        vision_map.needle_img, 
-        kp1, 
-        keypoint_image, 
-        kp2, 
-        matches, 
-        None)
+    # kp1, kp2, matches, match_points = vision_map.match_keypoints(keypoint_image)
+    # match_image = cv.drawMatches(
+    #     vision_map.needle_img, 
+    #     kp1, 
+    #     keypoint_image, 
+    #     kp2, 
+    #     matches, 
+    #     None)
 
-    if match_points:
-        # find the center point of all the matched features
-        center_point = vision_map.centeroid(match_points)
-        # account for the width of the needle image that appears on the left
-        center_point[0] += vision_map.needle_w
-        # drawn the found center point on the output image
-        match_image = vision_map.draw_crosshairs(match_image, [center_point])
+    # if match_points:
+    #     # find the center point of all the matched features
+    #     center_point = vision_map.centeroid(match_points)
+    #     # account for the width of the needle image that appears on the left
+    #     center_point[0] += vision_map.needle_w
+    #     # drawn the found center point on the output image
+    #     match_image = vision_map.draw_crosshairs(match_image, [center_point])
 
     # display the processed image
     # cv.imshow('Keypoint Search', match_image)
+    
+    # fog_range = range(10, 30)
+    # map_range = range(40, 60)
+    
+    # for x in processed_image:
+    #     for y in x:
+    #         if y[0] in fog_range:
+    #             y[0] = 0
+    #             y[1] = 255
+    #             y[2] = 0
+    #         elif y[0] in map_range:
+    #             y[0] = 255
+    #             y[1] = 0
+    #             y[2] = 0
+    #         else:
+    #             y[0] = 0
+    #             y[1] = 0
+    #             y[2] = 0
+
     cv.imshow('Processed', processed_image)
     # cv.imshow('Edges', edges_image)
     #cv.imshow('Matches', output_image)
