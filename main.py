@@ -3,8 +3,9 @@ import numpy as np
 import os
 import keyboard
 import pyautogui
+import time
 from PIL import Image
-from time import time
+from PIL import ImageOps
 from windowcapture import WindowCapture
 from vision import Vision
 from hsvfilter import HsvFilter
@@ -25,74 +26,53 @@ vision_map.init_control_gui()
 # map filter
 hsv_map_filter = HsvFilter(96, 66, 66, 179, 255, 255, 95, 30, 25, 107)
 
-loop_time = time()
+loop_time = time.time()
 while True:
 
+    valid_fog = []
     # get an updated image of the game
     screenshot = wincap.get_screenshot()
 
     # pre-process the image
     processed_image = vision_map.apply_hsv_filter(screenshot, hsv_map_filter)
-
-    # do edge detection
-    # edges_image = vision_map.apply_edge_filter(processed_image)
-
-    # do object detection
-    #rectangles = vision_limestone.findObjects(processed_image, 0.46)
-
-    # draw the detection results onto the original image
-    #output_image = vision_limestone.draw_rectangles(screenshot, rectangles)
-
-    # keypoint searching
-    # keypoint_image = edges_image
-    # crop the image to remove the ui elements
-    # x, w, y, h = [200, 1130, 70, 750]
-    # keypoint_image = keypoint_image[y:y+h, x:x+w]
-
-    # kp1, kp2, matches, match_points = vision_map.match_keypoints(keypoint_image)
-    # match_image = cv.drawMatches(
-    #     vision_map.needle_img, 
-    #     kp1, 
-    #     keypoint_image, 
-    #     kp2, 
-    #     matches, 
-    #     None)
-
-    # if match_points:
-    #     # find the center point of all the matched features
-    #     center_point = vision_map.centeroid(match_points)
-    #     # account for the width of the needle image that appears on the left
-    #     center_point[0] += vision_map.needle_w
-    #     # drawn the found center point on the output image
-    #     match_image = vision_map.draw_crosshairs(match_image, [center_point])
-
-    # display the processed image
-    # cv.imshow('Keypoint Search', match_image)
     
-    fog_range = range(10, 30)
-    map_range = range(40, 60)
-    
-    image_object = Image.fromarray(processed_image)
-    loaded_object = image_object.load()
+    fog_range_r = range(0, 45)
+    fog_range_g = range(65, 90)
+    map_range_r = range(50, 80)
+    map_range_g = range(55, 64)
 
-    for x in range(0, 484, 4):
-        for y in range(0, 462, 4):
-            r, g, b = loaded_object[x, y]
-            if r in fog_range:
-                image_object.putpixel((x, y), (0, 255, 0))
-            if r in map_range:
-                image_object.putpixel((x, y), (255, 0, 0))
-    
-    image_object = np.array(image_object)
-    image_object = image_object[:, :, ::-1].copy()
+    for x in range(0, 462):
+        for y in range(0, 484):
+            r = processed_image.item(x, y, 2)
+            g = processed_image.item(x, y, 1)
+            b = processed_image.item(x, y, 0)
+            if r in fog_range_r and g in fog_range_g:
+                # processed_image.itemset((x, y), (0, 255, 0))
+                # print('Am GREEN')
+                # valid_fog.append([x, y])
+                processed_image.itemset((x, y, 2), 0)
+                processed_image.itemset((x, y, 1), 255)
+                processed_image.itemset((x, y, 0), 0)
+            if r in map_range_r and g in map_range_g:
+                # print('Am RED')
+                # processed_image.itemset((x, y), (255, 0, 0))
+                processed_image.itemset((x, y, 2), 255)
+                processed_image.itemset((x, y, 1), 0)
+                processed_image.itemset((x, y, 0), 0)
 
-    cv.imshow('Processed', image_object)
-    # cv.imshow('Edges', edges_image)
-    #cv.imshow('Matches', output_image)
+    # print(valid_fog)
+    # do bot actions
+
+    #find most upwards value
+    # for n, x in enumerate(valid_fog):
+    #     valid_fog[n] = wincap.get_screen_position((valid_fog[n][0], valid_fog[n][1]))
+    
+    
+    cv.imshow('Processed', processed_image)
 
     # debug the loop rate
-    print('FPS {}'.format(1 / (time() - loop_time)))
-    loop_time = time()
+    print('FPS {}'.format(1 / (time.time() - loop_time)))
+    loop_time = time.time()
 
     # press 'q' with the output window focused to exit.
     # waits 1 ms every loop to process key presses
