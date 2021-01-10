@@ -6,6 +6,7 @@ import pyautogui
 import time
 from PIL import Image
 from PIL import ImageOps
+from win32con import BF_DIAGONAL_ENDBOTTOMLEFT
 from windowcapture import WindowCapture
 from vision import Vision
 from hsvfilter import HsvFilter
@@ -20,55 +21,66 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 wincap = WindowCapture('Path of Exile')
 # initialize the Vision class
 vision_map = Vision('poe_waypoint_crop.png')
-# initialize the trackbar window
-vision_map.init_control_gui()
 
 # map filter
 hsv_map_filter = HsvFilter(96, 66, 66, 179, 255, 255, 95, 30, 25, 107)
 
 loop_time = time.time()
-while True:
-
-    valid_fog = []
-    # get an updated image of the game
-    screenshot = wincap.get_screenshot()
+while(keyboard.is_pressed('q') == False):
+    valid_positions = []
+    closest_pixel = []
+    already_visited = []
+    time.sleep(2)
 
     # pre-process the image
+    screenshot = wincap.get_screenshot()
     processed_image = vision_map.apply_hsv_filter(screenshot, hsv_map_filter)
-    
-    fog_range_r = range(0, 45)
-    fog_range_g = range(65, 90)
-    map_range_r = range(50, 80)
-    map_range_g = range(55, 64)
 
-    for x in range(0, 720):
-        for y in range(0, 1080):
-            r = processed_image.item(x, y, 2)
-            g = processed_image.item(x, y, 1)
-            b = processed_image.item(x, y, 0)
-            if r in fog_range_r and g in fog_range_g:
-                # processed_image.itemset((x, y), (0, 255, 0))
-                # print('Am GREEN')
-                # valid_fog.append([x, y])
-                processed_image.itemset((x, y, 2), 0)
-                processed_image.itemset((x, y, 1), 255)
-                processed_image.itemset((x, y, 0), 0)
-            if r in map_range_r and g in map_range_g:
-                # print('Am RED')
-                # processed_image.itemset((x, y), (255, 0, 0))
-                processed_image.itemset((x, y, 2), 255)
-                processed_image.itemset((x, y, 1), 0)
-                processed_image.itemset((x, y, 0), 0)
+    cv.cvtColor(processed_image, cv.COLOR_BGR2HSV)
+    lower = np.array([80, 65, 10], dtype= 'uint8')
+    upper = np.array([120, 90, 70], dtype='uint8')
+    mask = cv.inRange(processed_image, lower, upper)
 
-    # print(valid_fog)
-    # do bot actions
+    blobDetectorParameters = cv.SimpleBlobDetector_Params()
+    blobDetectorParameters.filterByArea = True
+    blobDetectorParameters.minArea = 5
+    blobDetectorParameters.maxArea = 1000
+    blobDetectorParameters.minDistBetweenBlobs = 0
+    blobDetectorParameters.filterByCircularity = False
+    blobDetectorParameters.filterByColor = False
+    blobDetectorParameters.filterByConvexity = False
+    blobDetectorParameters.filterByInertia = True
+    blobDetectorParameters.minInertiaRatio = 0
+    blobDetectorParameters.maxInertiaRatio = 0.1
 
-    #find most upwards value
-    # for n, x in enumerate(valid_fog):
-    #     valid_fog[n] = wincap.get_screen_position((valid_fog[n][0], valid_fog[n][1]))
+    detector = cv.SimpleBlobDetector_create(blobDetectorParameters)
+    keypoints = detector.detect(mask)
+    imageWithKeypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+    center_x = int(wincap.w / 2)
+    center_y = int(wincap.h / 2)
+    center = (center_x, center_y)
+    screen_center = wincap.get_screen_position((center_x, center_y))
+
+    valid_positions = []
+    for x in keypoints:
+        valid_positions.append([int(x.pt[0]), int(x.pt[1])])
+
+    distance_average = lambda x, y: (x[0] - y[0])**2 + (x[1] - y[1])**2
+    if len(valid_positions) > 0:
+        closest_pixel = min(valid_positions, key=lambda co: distance_average(co, center))
+        closest_pixel = wincap.get_screen_position((closest_pixel[0], closest_pixel[1])) 
+    else:
+        closest_pixel = center
+    pyautogui.moveTo(x = closest_pixel[0], y = closest_pixel[1])
+    pyautogui.mouseDown()
+    time.sleep(1.9)
+    pyautogui.mouseUp()
+
+    cv.imshow("Keypoints", imageWithKeypoints)
     
-    
-    cv.imshow('Processed', processed_image)
+    # cv.imshow('Processed', processed_image)
+    # cv.imshow('mask', mask)
 
     # debug the loop rate
     print('FPS {}'.format(1 / (time.time() - loop_time)))
