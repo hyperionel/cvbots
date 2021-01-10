@@ -41,8 +41,8 @@ while True:
     map_range_r = range(50, 80)
     map_range_g = range(55, 64)
 
-    for x in range(0, 462):
-        for y in range(0, 484):
+    for x in range(0, 720):
+        for y in range(0, 1080):
             r = processed_image.item(x, y, 2)
             g = processed_image.item(x, y, 1)
             b = processed_image.item(x, y, 0)

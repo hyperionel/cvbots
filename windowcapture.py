@@ -32,10 +32,10 @@ class WindowCapture:
         # account for the window border and titlebar and cut them off
         border_pixels = 8
         titlebar_pixels = 30
-        self.w = 500  - (border_pixels * 2)
-        self.h = 500 - titlebar_pixels - border_pixels
-        self.cropped_x = int(self.w / 3)
-        self.cropped_y = int(self.h / 3)
+        self.w = self.w - (border_pixels * 2)
+        self.h = self.h - titlebar_pixels - border_pixels
+        self.cropped_x = border_pixels
+        self.cropped_y = titlebar_pixels
 
         # set the cropped coordinates offset so we can translate screenshot
         # images into actual screen positions
@@ -50,7 +50,7 @@ class WindowCapture:
         dataBitMap = win32ui.CreateBitmap()
         dataBitMap.CreateCompatibleBitmap(dcObj, self.w, self.h)
         cDC.SelectObject(dataBitMap)
-        cDC.BitBlt((0, 0), (self.w, self.h), dcObj, (400, 100), win32con.SRCCOPY)
+        cDC.BitBlt((0, 0), (self.w, self.h), dcObj, (self.cropped_x, self.cropped_y), win32con.SRCCOPY)
 
         # convert the raw data into a format opencv can read
         #dataBitMap.SaveBitmapFile(cDC, 'debug.bmp')
