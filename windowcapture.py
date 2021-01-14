@@ -1,9 +1,13 @@
 import numpy as np
 import win32gui, win32ui, win32con
-
+from threading import Thread, Lock
 
 class WindowCapture:
 
+    #threading properties
+    stopped = True
+    lock = None
+    screenshot = None
     # properties
     w = 0
     h = 0
@@ -67,7 +71,7 @@ class WindowCapture:
         # drop the alpha channel, or cv.matchTemplate() will throw an error like:
         #   error: (-215:Assertion failed) (depth == CV_8U || depth == CV_32F) && type == _templ.type() 
         #   && _img.dims() <= 2 in function 'cv::matchTemplate'
-        # img = img[...,:3]
+        img = img[...,:3]
 
         # make image C_CONTIGUOUS to avoid errors that look like:
         #   File ... in draw_rectangles
@@ -88,10 +92,17 @@ class WindowCapture:
                 print(hex(hwnd), win32gui.GetWindowText(hwnd))
         win32gui.EnumWindows(winEnumHandler, None)
 
-    # translate a pixel position on a screenshot image to a pixel position on the screen.
-    # pos = (x, y)
-    # WARNING: if you move the window being captured after execution is started, this will
-    # return incorrect coordinates, because the window position is only calculated in
-    # the __init__ constructor.
-    def get_screen_position(self, pos):
-        return (pos[0] + self.offset_x, pos[1] + self.offset_y)
+    def start(self):
+        self.stopped = False
+        t = Thread(target=self.run)
+        t.start()
+    
+    def stop(self):
+        self.stopped = True
+    
+    def run(self):
+        while not self.stopped:
+            screenshot = self.get_screenshot()
+            self.lock.acquire()
+            self.screenshot = screenshot
+            self.lock.release()
