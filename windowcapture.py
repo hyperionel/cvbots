@@ -95,7 +95,7 @@ class WindowCapture:
     
     def run(self):
         while not self.stopped:
-            sleep(0.5)
+            sleep(0.1)
             screenshot = self.get_screenshot()
             self.lock.acquire()
             self.screenshot = screenshot
