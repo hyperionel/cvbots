@@ -1,3 +1,4 @@
+from poebot import PoeBot
 import cv2 as cv
 import numpy as np
 import os
@@ -8,10 +9,11 @@ from PIL import Image
 from PIL import ImageOps
 from win32con import BF_DIAGONAL_ENDBOTTOMLEFT
 from windowcapture import WindowCapture
-from vision import Vision
 from hsvfilter import HsvFilter
 from edgefilter import EdgeFilter
 from utils import Utils
+from poebot import PoeBot, PoeBotState
+from poedetector import PoeDetector
 
 # Change the working directory to the folder this script is in.
 # Doing this because I'll be putting the files from each video in their own folder on GitHub
@@ -20,40 +22,40 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # initialize the WindowCapture class
 wincap = WindowCapture('Path of Exile')
-# initialize the Vision class
-vision_map = Vision()
-vision_map_portal = Vision('poe_map_waypoint.png')
-# map filter
-hsv_map_filter = HsvFilter(96, 66, 66, 179, 255, 255, 95, 30, 25, 107)
 
-valid_position_counter = 0
-valid_position_history = []
-invalid_position_history = []
+poedetector = PoeDetector()
 
-loop_time = time.time()
+bot = PoeBot((wincap.offset_x, wincap.offset_y), (wincap.w, wincap.h))
 
 wincap.start()
+poedetector.start()
+bot.start()
 
 while(keyboard.is_pressed('q') == False):
-    valid_positions = []
-    closest_pixel = []
-    already_visited = []
-    time.sleep(2)
+    if wincap.screenshot is None:
+        continue
 
-    # pre-process the image
-    screenshot = wincap.get_screenshot()
-    processed_image = vision_map.apply_hsv_filter(screenshot, hsv_map_filter)
-    cv.cvtColor(processed_image, cv.COLOR_BGR2HSV)
+    if bot.state in range(0, 1):
+        screenshot = wincap.screenshot
+        loot_targets = poedetector.loot_targets
+        map_targets = poedetector.map_targets
+        poedetector.update_screenshot(screenshot)
 
-    portal = vision_map_portal.findObjects(screenshot, 0.4, 1)
-    output_image = vision_map_portal.draw_rectangles(screenshot, portal)
-    cv.imshow('portal', output_image)
+        if bot.state == PoeBotState.INITIALIZING:
+            bot.update_loot_targets(loot_targets)
+            bot.update_map_targets(map_targets)
+        if bot.state == PoeBotState.SEARCHING:
+            bot.update_loot_targets(loot_targets)
+            bot.update_map_targets(map_targets)
+    elif bot.state == PoeBotState.PORTING_BACK:
+        continue
 
-    # center_x = int(wincap.w / 2)
-    # center_y = int(wincap.h / 2)
-    # center = (center_x, center_y)
-    # screen_center = wincap.get_screen_position((center_x, center_y))
-    
+
+    # cv.cvtColor(processed_image, cv.COLOR_BGR2HSV)
+
+    # portal = vision_map_portal.findObjects(screenshot, 0.4, 1)
+    # output_image = vision_map_portal.draw_rectangles(screenshot, portal)
+    # cv.imshow('portal', output_image)
 
     # blobDetectorParameters = cv.SimpleBlobDetector_Params()
     # blobDetectorParameters.filterByArea = True
@@ -135,19 +137,11 @@ while(keyboard.is_pressed('q') == False):
     # time.sleep(1.9)
     # pyautogui.mouseUp()
 
-    # cv.imshow("Keypoints", imageWithKeypoints)
-    # cv.imshow("Item Keypoints", itemImageWithKeypoints)
-    
-    # # cv.imshow('Processed', processed_image)
-    # # cv.imshow('mask', mask)
-
-    # debug the loop rate
-    print('FPS {}'.format(1 / (time.time() - loop_time)))
-    loop_time = time.time()
-
     # press 'q' with the output window focused to exit.
     # waits 1 ms every loop to process key presses
     if cv.waitKey(1) == ord('q'):
+        wincap.stop()
+        bot.stop()
         cv.destroyAllWindows()
         break
 

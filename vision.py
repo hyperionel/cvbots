@@ -69,6 +69,24 @@ class Vision:
 
         return rectangles
 
+    def findBlobs(self, image, lower_range, upper_range, blobParams, inverted=False, debug= False):
+        cv.cvtColor(image, cv.COLOR_BGR2HSV)
+        lower_range = np.array(lower_range, dtype= 'uint8')
+        upper_range = np.array(upper_range, dtype='uint8')
+        mask_item = cv.inRange(image, lower_range, upper_range)
+        if inverted:
+            cv.bitwise_not(mask_item)
+        detector = cv.SimpleBlobDetector_create(blobParams)
+        keypoints = detector.detect(mask_item)
+
+        itemImageWithKeypoints = cv.drawKeypoints(mask_item, keypoints, np.array([]), (0,0,255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv.imshow('Current', itemImageWithKeypoints)
+
+        valid_targets = []
+        for x in keypoints:
+            valid_targets.append([int(x.pt[0]), int(x.pt[1])])
+        return valid_targets
+
     # given a list of [x, y, w, h] rectangles returned by find(), convert those into a list of
     # [x, y] positions in the center of those rectangles where we can click on those found items
     def get_click_points(self, rectangles):
