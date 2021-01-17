@@ -21,11 +21,13 @@ class PoeDetector:
 
     #threading updates
     loot_targets = []
+    map_loot_targets = []
     map_targets = []
     waypoint_target = []
     waypoint_tooltip_target = []
     act_target = []
     node_target = []
+    reset_tooltip_target = []
     
 
     #screenshot filtering values
@@ -39,12 +41,23 @@ class PoeDetector:
     poe_waypoint_map_tooltip = 'poe_waypoint_tooltip.png'
     poe_act_tooltip = 'act_tooltip.png'
     poe_node_tooltip = 'map_tooltip.png'
+    poe_reset_tooltip = 'reset_act_tooltip.png'
+    poe_map_loot_icon = 'map_item_icon.png'
 
     def __init__(self):
         self.vision = Vision()
         self.lock = Lock()
 
-    def findSingleObject(self, haystack_img, needle_img, threshold = 0.9, method = cv.TM_CCOEFF_NORMED): 
+    def findSingleObject(self, haystack_img, needle_img, threshold = 0.5, method = cv.TM_CCOEFF_NORMED): 
+        needle_img = cv.imread(needle_img)
+        results = cv.matchTemplate(haystack_img, needle_img, method)
+        results  =  np.where(results >= threshold)
+        results = list(zip(*results[::-1]))
+        if not results:
+            return np.array([], dtype=np.int32).reshape(0, 4)
+        return results[0]
+
+    def findMultipleObjects(self, haystack_img, needle_img, threshold = 0.5, method = cv.TM_CCOEFF_NORMED): 
         needle_img = cv.imread(needle_img)
         results = cv.matchTemplate(haystack_img, needle_img, method)
         results  =  np.where(results >= threshold)
@@ -58,8 +71,8 @@ class PoeDetector:
         return map_waypoint
     
     def find_map_waypoint_tooltip(self):
-        map_tooltip = self.findSingleObject(self.screenshot, self.poe_waypoint_map_tooltip)
-        return map_tooltip
+        map_tooltip = self.findSingleObject(self.screenshot, self.poe_waypoint_map_tooltip, threshold = 0.8)
+        return map_tooltip  
 
     def find_act_target(self):
         act_target = self.findSingleObject(self.screenshot, self.poe_act_tooltip)
@@ -69,9 +82,17 @@ class PoeDetector:
         node_target = self.findSingleObject(self.screenshot, self.poe_node_tooltip)
         return node_target
 
+    def find_reset_tooltip_target(self):
+        reset_tooltip_target = self.findSingleObject(self.screenshot, self.poe_reset_tooltip, threshold = 0.7)
+        return reset_tooltip_target
+
     def find_loot_targets(self):
-        targets = self.findBlobs(self.screenshot, self.item_lower_range, self.item_upper_range, self.item_blob_params(), inverted=True)
+        targets = self.findBlobs(self.screenshot, self.item_lower_range, self.item_upper_range, self.item_blob_params())
         return targets
+
+    def find_map_loot_targets(self):
+        map_loot = self.findMultipleObjects(self.screenshot, self.poe_map_loot_icon, threshold = 0.8)
+        return map_loot
 
     def find_map_targets(self):
         filter_screenshot = self.vision.apply_hsv_filter(self.screenshot, self.map_filter())
@@ -79,12 +100,11 @@ class PoeDetector:
         return targets
 
     def findBlobs(self, screenshot, lower_range, upper_range, blobParams, inverted=False, debug= False):
-        cv.cvtColor(screenshot, cv.COLOR_BGR2HSV)
         lower_range = np.array(lower_range, dtype= 'uint8')
         upper_range = np.array(upper_range, dtype='uint8')
         mask_item = cv.inRange(screenshot, lower_range, upper_range)
         if inverted:
-            cv.bitwise_not(mask_item)
+            mask_item = cv.bitwise_not(mask_item)
         detector = cv.SimpleBlobDetector_create(blobParams)
         keypoints = detector.detect(mask_item)
 
@@ -96,7 +116,7 @@ class PoeDetector:
     def item_blob_params(self):
         blobParams = cv.SimpleBlobDetector_Params()
         blobParams.filterByArea = True
-        blobParams.minArea = 300
+        blobParams.minArea = 500
         blobParams.maxArea = 9999999
         blobParams.minDistBetweenBlobs = 0
         blobParams.filterByCircularity = False
@@ -121,13 +141,27 @@ class PoeDetector:
     def map_filter(self):
         return HsvFilter(*self.map_filter_values)
 
-    def start(self):
+    def start_main_thread(self):
         self.stopped = False
         t = Thread(target=self.run)
         t.start()
+
+    def start_loot_scan_thread(self):
+        t = Thread(target=self.run_loot_scan)
+        t.start()
+
+    def start_map_loot_scan_thread(self):
+        t = Thread(target=self.run_map_loot_scan)
+        t.start()
+
+    def start_map_scan_thread(self):
+        t = Thread(target=self.run_map_scan)
+        t.start()
     
     def stop(self):
+        self.lock.acquire()
         self.stopped = True
+        self.lock.release()
 
     def update_screenshot(self, screenshot):
         self.lock.acquire()
@@ -138,20 +172,37 @@ class PoeDetector:
         self.lock.acquire()
         self.poe_bot_state = state
         self.lock.release()
+
+    def run_map_loot_scan(self):
+        map_loot_targets = self.find_map_loot_targets()
+
+        self.lock.acquire()
+        self.map_loot_targets = map_loot_targets
+        self.lock.release()
+
+    def run_loot_scan(self):
+        loot_targets = self.find_loot_targets()
+
+        self.lock.acquire()
+        self.loot_targets = loot_targets
+        self.lock.release()
+
+    def run_map_scan(self):
+        map_targets = self.find_map_targets()
+
+        self.lock.acquire()
+        self.map_targets = map_targets
+        self.lock.release()
     
     def run(self):
         while not self.stopped:
-            sleep(0.1)
+            sleep(0.01)
             if not self.poe_bot_state is None:
                 if self.poe_bot_state in range(0, 3):
                     if not self.screenshot is None:
-                        loot_targets = self.find_loot_targets()
-                        map_targets = self.find_map_targets()
-                        
-                        self.lock.acquire()
-                        self.loot_targets = loot_targets
-                        self.map_targets = map_targets
-                        self.lock.release()
+                        self.start_loot_scan_thread()
+                        self.start_map_loot_scan_thread()
+                        self.start_map_scan_thread()
                 elif self.poe_bot_state == PoeBotState.FINDING_WAYPOINT:
                     if not self.screenshot is None:
                         map_waypoint = self.find_map_waypoint()
@@ -171,6 +222,13 @@ class PoeDetector:
                         self.lock.acquire()
                         self.act_target = act_target
                         self.node_target = node_target
+                        self.lock.release()
+                elif self.poe_bot_state == PoeBotState.RESET_NODE_AND_GO:
+                    if not self.screenshot is None:
+                        reset_tooltip_target = self.find_reset_tooltip_target()
+
+                        self.lock.acquire()
+                        self.reset_tooltip_target = reset_tooltip_target
                         self.lock.release()
                 else:
                     pass
