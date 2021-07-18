@@ -9,6 +9,6 @@ This was a pet project that was born out of curiosity on how computer vision wou
 - It handles "getting stuck" based on a movement history & retry attempt
 - It can reset after the map is complete (port back to town and reset/re-enter the map)
 
-This was only meant as a proof of concept therefore was not made to be user-friendly (or very optimized from a performance standpoint :) )
+This was only meant as a proof of concept therefore was not made to be user-friendly (or very optimized from a performance standpoint)
 
-Only works with a very automated summoner build (e.g. summon everything and just let it walk around the map while your minions wreak havoc)
+Only works with a very automated summoner build (e.g. summon everything and just let it walk around the map while your minions kill stuff)
